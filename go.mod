@@ -115,3 +115,6 @@ require (
 	golang.org/x/time v0.7.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 )
+
+// Use local sing library with buffer leak fix
+replace github.com/metacubex/sing => ./sing
