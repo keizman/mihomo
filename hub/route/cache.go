@@ -12,6 +12,7 @@ import (
 func cacheRouter() http.Handler {
 	r := chi.NewRouter()
 	r.Post("/fakeip/flush", flushFakeIPPool)
+	r.Post("/dns/flush", flushDnsCache)
 	return r
 }
 
@@ -24,3 +25,9 @@ func flushFakeIPPool(w http.ResponseWriter, r *http.Request) {
 	}
 	render.NoContent(w, r)
 }
+
+func flushDnsCache(w http.ResponseWriter, r *http.Request) {
+	resolver.ClearCache()
+	render.NoContent(w, r)
+}
+

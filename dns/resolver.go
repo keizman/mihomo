@@ -20,6 +20,19 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+var (
+	// GlobalDNSDelay for testing purposes - simulates network latency
+	GlobalDNSDelay time.Duration
+)
+
+func SetDNSDelay(delay time.Duration) {
+	GlobalDNSDelay = delay
+}
+
+func GetDNSDelay() time.Duration {
+	return GlobalDNSDelay
+}
+
 type dnsClient interface {
 	ExchangeContext(ctx context.Context, m *D.Msg) (msg *D.Msg, err error)
 	Address() string
@@ -181,6 +194,10 @@ func (r *Resolver) ExchangeContext(ctx context.Context, m *D.Msg) (msg *D.Msg, e
 			// updating TTL by subtracting common delta time from each DNS record
 			updateMsgTTL(msg, uint32(time.Until(expireTime).Seconds()))
 		}
+		// Apply testing delay if configured
+		if GlobalDNSDelay > 0 {
+			time.Sleep(GlobalDNSDelay)
+		}
 		return
 	}
 	return r.exchangeWithoutCache(ctx, m)
@@ -263,6 +280,11 @@ func (r *Resolver) exchangeWithoutCache(ctx context.Context, m *D.Msg) (msg *D.M
 		if shared {
 			msg = msg.Copy()
 		}
+	}
+
+	// Apply testing delay if configured
+	if GlobalDNSDelay > 0 {
+		time.Sleep(GlobalDNSDelay)
 	}
 
 	return

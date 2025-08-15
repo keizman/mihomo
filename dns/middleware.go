@@ -218,8 +218,23 @@ func compose(middlewares []middleware, endpoint handler) handler {
 	return h
 }
 
+func withDelay() middleware {
+	return func(next handler) handler {
+		return func(ctx *context.DNSContext, r *D.Msg) (*D.Msg, error) {
+			// Apply testing delay if configured
+			if GlobalDNSDelay > 0 {
+				time.Sleep(GlobalDNSDelay)
+			}
+			return next(ctx, r)
+		}
+	}
+}
+
 func NewHandler(resolver *Resolver, mapper *ResolverEnhancer) handler {
 	middlewares := []middleware{}
+
+	// Add delay middleware first to affect all DNS requests
+	middlewares = append(middlewares, withDelay())
 
 	if resolver.hosts != nil {
 		middlewares = append(middlewares, withHosts(R.NewHosts(resolver.hosts), mapper.mapping))

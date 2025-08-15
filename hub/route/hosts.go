@@ -230,6 +230,9 @@ func clearHosts(w http.ResponseWriter, r *http.Request) {
 	
 	// 重新构建 hosts trie，只包含配置文件中的 hosts
 	rebuildHostsFromConfig()
+	
+	// 清理DNS缓存，确保清空操作生效
+	resolver.ClearCache()
 
 	render.JSON(w, r, render.M{
 		"message": "All dynamic hosts cleared successfully",
@@ -307,6 +310,8 @@ func updateHostsMapping(domain string, value interface{}, allowUpdate bool) erro
 		}
 		delete(dynamicHosts, domain)
 		rebuildHostsFromConfig()
+		// 清理DNS缓存，确保删除的hosts配置生效
+		resolver.ClearCache()
 		return nil
 	}
 
@@ -328,6 +333,9 @@ func updateHostsMapping(domain string, value interface{}, allowUpdate bool) erro
 	
 	// 重建 hosts trie
 	rebuildHostsFromConfig()
+	
+	// 清理DNS缓存，确保新的hosts配置生效
+	resolver.ClearCache()
 
 	log.Infoln("Hosts updated: %s -> %v", domain, value)
 	return nil
