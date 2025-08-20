@@ -7,6 +7,7 @@ import (
 
 	"github.com/metacubex/mihomo/component/resolver"
 	"github.com/metacubex/mihomo/component/trie"
+	"github.com/metacubex/mihomo/dns"
 	"github.com/metacubex/mihomo/log"
 
 	"github.com/go-chi/chi/v5"
@@ -232,7 +233,7 @@ func clearHosts(w http.ResponseWriter, r *http.Request) {
 	rebuildHostsFromConfig()
 	
 	// 清理DNS缓存，确保清空操作生效
-	resolver.ClearCache()
+	dns.FlushCacheWithDefaultResolver()
 
 	render.JSON(w, r, render.M{
 		"message": "All dynamic hosts cleared successfully",
@@ -311,7 +312,7 @@ func updateHostsMapping(domain string, value interface{}, allowUpdate bool) erro
 		delete(dynamicHosts, domain)
 		rebuildHostsFromConfig()
 		// 清理DNS缓存，确保删除的hosts配置生效
-		resolver.ClearCache()
+		dns.FlushCacheWithDefaultResolver()
 		return nil
 	}
 
@@ -335,7 +336,7 @@ func updateHostsMapping(domain string, value interface{}, allowUpdate bool) erro
 	rebuildHostsFromConfig()
 	
 	// 清理DNS缓存，确保新的hosts配置生效
-	resolver.ClearCache()
+	dns.FlushCacheWithDefaultResolver()
 
 	log.Infoln("Hosts updated: %s -> %v", domain, value)
 	return nil
