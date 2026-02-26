@@ -66,6 +66,7 @@ type General struct {
 	KeepAliveIdle           int               `json:"keep-alive-idle"`
 	KeepAliveInterval       int               `json:"keep-alive-interval"`
 	DisableKeepAlive        bool              `json:"disable-keep-alive"`
+	NetSim                  RawNetSim         `json:"net-sim"`
 }
 
 // Inbound config
@@ -241,6 +242,23 @@ type RawFallbackFilter struct {
 type RawClashForAndroid struct {
 	AppendSystemDNS   bool   `yaml:"append-system-dns" json:"append-system-dns"`
 	UiSubtitlePattern string `yaml:"ui-subtitle-pattern" json:"ui-subtitle-pattern"`
+}
+
+type RawNetSim struct {
+	Enabled           bool    `yaml:"enabled" json:"enabled"`
+	Latency           int     `yaml:"latency" json:"latency"`
+	Jitter            int     `yaml:"jitter" json:"jitter"`
+	Loss              float64 `yaml:"loss" json:"loss"`
+	Bandwidth         float64 `yaml:"bandwidth" json:"bandwidth"`
+	UploadBandwidth   float64 `yaml:"upload-bandwidth" json:"upload-bandwidth"`
+	DownloadBandwidth float64 `yaml:"download-bandwidth" json:"download-bandwidth"`
+	Corruption        float64 `yaml:"corruption" json:"corruption"`
+	Duplication       float64 `yaml:"duplication" json:"duplication"`
+	Reordering        float64 `yaml:"reordering" json:"reordering"`
+	BurstLoss         int     `yaml:"burst-loss" json:"burst-loss"`
+	BurstDelay        int     `yaml:"burst-delay" json:"burst-delay"`
+	PacketSize        int     `yaml:"packet-size" json:"packet-size"`
+	QueueType         string  `yaml:"queue-type" json:"queue-type"`
 }
 
 type RawNTP struct {
@@ -433,6 +451,7 @@ type RawConfig struct {
 	TLS           RawTLS                    `yaml:"tls" json:"tls"`
 
 	ClashForAndroid RawClashForAndroid `yaml:"clash-for-android" json:"clash-for-android"`
+	NetSim          RawNetSim          `yaml:"net-sim" json:"net-sim"`
 }
 
 // Parse config
@@ -753,6 +772,7 @@ func parseGeneral(cfg *RawConfig) (*General, error) {
 		KeepAliveIdle:           cfg.KeepAliveIdle,
 		KeepAliveInterval:       cfg.KeepAliveInterval,
 		DisableKeepAlive:        cfg.DisableKeepAlive,
+		NetSim:                  cfg.NetSim,
 	}, nil
 }
 

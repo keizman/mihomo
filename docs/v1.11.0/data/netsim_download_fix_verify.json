@@ -1,0 +1,212 @@
+{
+  "timestamp": "2026-02-25 17:02:24",
+  "target": "http://192.168.8.101:18080/blob?kb=1024",
+  "proxy": "http://192.168.8.100:7890",
+  "results": [
+    {
+      "case": "before_disabled",
+      "requested": {
+        "enabled": false
+      },
+      "set_response": {
+        "config": {
+          "enabled": false,
+          "latency": 0,
+          "jitter": 0,
+          "loss": 0,
+          "bandwidth": 0,
+          "upload-bandwidth": 0,
+          "download-bandwidth": 0,
+          "corruption": 0,
+          "duplication": 0,
+          "reordering": 0,
+          "burst-loss": 0,
+          "burst-delay": 0,
+          "packet-size": 0,
+          "queue-type": "fifo"
+        },
+        "message": "net-sim updated"
+      },
+      "effective": {
+        "enabled": false,
+        "latency": 0,
+        "jitter": 0,
+        "loss": 0,
+        "bandwidth": 0,
+        "upload-bandwidth": 0,
+        "download-bandwidth": 0,
+        "corruption": 0,
+        "duplication": 0,
+        "reordering": 0,
+        "burst-loss": 0,
+        "burst-delay": 0,
+        "packet-size": 0,
+        "queue-type": "fifo"
+      },
+      "runs": [
+        {
+          "ok": true,
+          "time_s": 0.099032,
+          "code": 200,
+          "raw": "0.099032 200",
+          "run": 1
+        },
+        {
+          "ok": true,
+          "time_s": 0.159639,
+          "code": 200,
+          "raw": "0.159639 200",
+          "run": 2
+        },
+        {
+          "ok": true,
+          "time_s": 0.120619,
+          "code": 200,
+          "raw": "0.120619 200",
+          "run": 3
+        },
+        {
+          "ok": true,
+          "time_s": 0.095588,
+          "code": 200,
+          "raw": "0.095588 200",
+          "run": 4
+        },
+        {
+          "ok": true,
+          "time_s": 0.119913,
+          "code": 200,
+          "raw": "0.119913 200",
+          "run": 5
+        }
+      ],
+      "summary": {
+        "count": 5,
+        "avg_s": 0.119,
+        "min_s": 0.0956,
+        "max_s": 0.1596,
+        "samples_s": [
+          0.099,
+          0.1596,
+          0.1206,
+          0.0956,
+          0.1199
+        ]
+      },
+      "stats": {
+        "burst-delays": 0,
+        "burst-drops": 0,
+        "corrupted-packets": 0,
+        "delayed-packets": 0,
+        "dropped-packets": 0,
+        "duplicated-packets": 0,
+        "reordered-packets": 0,
+        "throttled-bytes": 0,
+        "total-packets": 0
+      }
+    },
+    {
+      "case": "after_download_bw_0.5",
+      "requested": {
+        "enabled": true,
+        "download-bandwidth": 0.5
+      },
+      "set_response": {
+        "config": {
+          "enabled": true,
+          "latency": 0,
+          "jitter": 0,
+          "loss": 0,
+          "bandwidth": 0,
+          "upload-bandwidth": 0,
+          "download-bandwidth": 0.5,
+          "corruption": 0,
+          "duplication": 0,
+          "reordering": 0,
+          "burst-loss": 0,
+          "burst-delay": 0,
+          "packet-size": 0,
+          "queue-type": "fifo"
+        },
+        "message": "net-sim updated"
+      },
+      "effective": {
+        "enabled": true,
+        "latency": 0,
+        "jitter": 0,
+        "loss": 0,
+        "bandwidth": 0,
+        "upload-bandwidth": 0,
+        "download-bandwidth": 0.5,
+        "corruption": 0,
+        "duplication": 0,
+        "reordering": 0,
+        "burst-loss": 0,
+        "burst-delay": 0,
+        "packet-size": 0,
+        "queue-type": "fifo"
+      },
+      "runs": [
+        {
+          "ok": true,
+          "time_s": 15.918716,
+          "code": 200,
+          "raw": "15.918716 200",
+          "run": 1
+        },
+        {
+          "ok": true,
+          "time_s": 15.93398,
+          "code": 200,
+          "raw": "15.933980 200",
+          "run": 2
+        },
+        {
+          "ok": true,
+          "time_s": 15.949205,
+          "code": 200,
+          "raw": "15.949205 200",
+          "run": 3
+        },
+        {
+          "ok": true,
+          "time_s": 15.954811,
+          "code": 200,
+          "raw": "15.954811 200",
+          "run": 4
+        },
+        {
+          "ok": true,
+          "time_s": 15.965513,
+          "code": 200,
+          "raw": "15.965513 200",
+          "run": 5
+        }
+      ],
+      "summary": {
+        "count": 5,
+        "avg_s": 15.9444,
+        "min_s": 15.9187,
+        "max_s": 15.9655,
+        "samples_s": [
+          15.9187,
+          15.934,
+          15.9492,
+          15.9548,
+          15.9655
+        ]
+      },
+      "stats": {
+        "burst-delays": 0,
+        "burst-drops": 0,
+        "corrupted-packets": 0,
+        "delayed-packets": 0,
+        "dropped-packets": 0,
+        "duplicated-packets": 0,
+        "reordered-packets": 0,
+        "throttled-bytes": 5243670,
+        "total-packets": 351
+      }
+    }
+  ]
+}

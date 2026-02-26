@@ -21,6 +21,7 @@ import (
 	mihomoHttp "github.com/metacubex/mihomo/component/http"
 	"github.com/metacubex/mihomo/component/iface"
 	"github.com/metacubex/mihomo/component/keepalive"
+	"github.com/metacubex/mihomo/component/netsim"
 	"github.com/metacubex/mihomo/component/profile"
 	"github.com/metacubex/mihomo/component/profile/cachefile"
 	"github.com/metacubex/mihomo/component/resolver"
@@ -109,6 +110,7 @@ func ApplyConfig(cfg *config.Config, force bool) {
 	updateTun(cfg.General) // tun should not care "force"
 	updateIPTables(cfg)
 	updateTunnels(cfg.Tunnels)
+	applyNetSim(cfg)
 
 	tunnel.OnInnerLoading()
 
@@ -521,6 +523,26 @@ func updateIPTables(cfg *config.Config) {
 	}
 
 	log.Infoln("[IPTABLES] Setting iptables completed")
+}
+
+func applyNetSim(cfg *config.Config) {
+	raw := cfg.General.NetSim
+	netsim.UpdateConfig(&netsim.Config{
+		Enabled:           raw.Enabled,
+		Latency:           raw.Latency,
+		Jitter:            raw.Jitter,
+		Loss:              raw.Loss,
+		Bandwidth:         raw.Bandwidth,
+		UploadBandwidth:   raw.UploadBandwidth,
+		DownloadBandwidth: raw.DownloadBandwidth,
+		Corruption:        raw.Corruption,
+		Duplication:       raw.Duplication,
+		Reordering:        raw.Reordering,
+		BurstLoss:         raw.BurstLoss,
+		BurstDelay:        raw.BurstDelay,
+		PacketSize:        raw.PacketSize,
+		QueueType:         raw.QueueType,
+	})
 }
 
 func Shutdown() {

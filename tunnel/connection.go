@@ -9,6 +9,7 @@ import (
 	"time"
 
 	N "github.com/metacubex/mihomo/common/net"
+	"github.com/metacubex/mihomo/component/netsim"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/log"
 )
@@ -156,10 +157,25 @@ func handleUDPToRemote(packet C.UDPPacket, pc C.PacketConn, addr *net.UDPAddr) e
 		return errors.New("udp addr invalid")
 	}
 
-	if _, err := pc.WriteTo(packet.Data(), addr); err != nil {
-		return err
+	data := packet.Data()
+	if netsim.Enabled() {
+		out, drop, duplicate := netsim.SimulateUDPSend(data)
+		if drop {
+			_ = pc.SetReadDeadline(time.Now().Add(udpTimeout))
+			return nil
+		}
+		data = out
+		if _, err := pc.WriteTo(data, addr); err != nil {
+			return err
+		}
+		if duplicate {
+			_, _ = pc.WriteTo(data, addr)
+		}
+	} else {
+		if _, err := pc.WriteTo(data, addr); err != nil {
+			return err
+		}
 	}
-	// reset timeout
 	_ = pc.SetReadDeadline(time.Now().Add(udpTimeout))
 
 	return nil
@@ -178,6 +194,17 @@ func handleUDPToLocal(writeBack C.WriteBack, pc C.PacketConn, sender C.PacketSen
 		data, put, from, err := pc.WaitReadFrom()
 		if err != nil {
 			return
+		}
+
+		if netsim.Enabled() {
+			out, drop := netsim.SimulateUDPRecv(data)
+			if drop {
+				if put != nil {
+					put()
+				}
+				continue
+			}
+			data = out
 		}
 
 		fromUDPAddr, isUDPAddr := from.(*net.UDPAddr)
@@ -218,5 +245,9 @@ func closeAllLocalCoon(lAddr string) {
 }
 
 func handleSocket(inbound, outbound net.Conn) {
+	if netsim.Enabled() {
+		inbound = netsim.WrapConn(inbound, netsim.DirectionDownload)
+		outbound = netsim.WrapConn(outbound, netsim.DirectionUpload)
+	}
 	N.Relay(inbound, outbound)
 }
