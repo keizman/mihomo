@@ -157,36 +157,28 @@ func handleUDPToRemote(packet C.UDPPacket, pc C.PacketConn, addr *net.UDPAddr) e
 		return errors.New("udp addr invalid")
 	}
 
-	data := packet.Data()
-	if netsim.Enabled() {
-		out, drop, duplicate := netsim.SimulateUDPSend(data)
-		if drop {
-			_ = pc.SetReadDeadline(time.Now().Add(udpTimeout))
-			return nil
-		}
-		data = out
-		if _, err := pc.WriteTo(data, addr); err != nil {
+	if flow := netsim.UpstreamFlow(pc); flow != nil {
+		flow.Send(packet.Data(), func(b []byte) error {
+			_, err := pc.WriteTo(b, addr)
 			return err
-		}
-		if duplicate {
-			_, _ = pc.WriteTo(data, addr)
-		}
-	} else {
-		if _, err := pc.WriteTo(data, addr); err != nil {
-			return err
-		}
+		})
+	} else if _, err := pc.WriteTo(packet.Data(), addr); err != nil {
+		return err
 	}
+	// reset timeout
 	_ = pc.SetReadDeadline(time.Now().Add(udpTimeout))
 
 	return nil
 }
 
 func handleUDPToLocal(writeBack C.WriteBack, pc C.PacketConn, sender C.PacketSender, key string, oAddrPort netip.AddrPort) {
+	var simFlow *netsim.UDPFlow
 	defer func() {
 		sender.Close()
 		_ = pc.Close()
 		closeAllLocalCoon(key)
 		natTable.Delete(key)
+		netsim.ReleaseFlow(pc)
 	}()
 
 	for {
@@ -194,17 +186,6 @@ func handleUDPToLocal(writeBack C.WriteBack, pc C.PacketConn, sender C.PacketSen
 		data, put, from, err := pc.WaitReadFrom()
 		if err != nil {
 			return
-		}
-
-		if netsim.Enabled() {
-			out, drop := netsim.SimulateUDPRecv(data)
-			if drop {
-				if put != nil {
-					put()
-				}
-				continue
-			}
-			data = out
 		}
 
 		fromUDPAddr, isUDPAddr := from.(*net.UDPAddr)
@@ -223,6 +204,27 @@ func handleUDPToLocal(writeBack C.WriteBack, pc C.PacketConn, sender C.PacketSen
 		fromAddr = sender.RestoreReadFrom(fromAddr).Unmap()
 
 		fromAddrPort = netip.AddrPortFrom(fromAddr, fromAddrPort.Port())
+
+		if simFlow == nil && netsim.Enabled() {
+			simFlow = netsim.NewUDPFlow(netsim.DirectionDownload)
+		}
+		if simFlow != nil {
+			if err = simFlow.Err(); err != nil {
+				if put != nil {
+					put()
+				}
+				return
+			}
+			wbAddr := net.UDPAddrFromAddrPort(fromAddrPort)
+			simFlow.Send(data, func(b []byte) error {
+				_, err := writeBack.WriteBack(b, wbAddr)
+				return err
+			})
+			if put != nil {
+				put()
+			}
+			continue
+		}
 
 		_, err = writeBack.WriteBack(data, net.UDPAddrFromAddrPort(fromAddrPort))
 		if put != nil {

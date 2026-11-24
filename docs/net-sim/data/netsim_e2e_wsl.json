@@ -1,0 +1,135 @@
+[
+  {
+    "case": "baseline",
+    "config": "off",
+    "measured": "tcp 0.1ms udp 0.1ms",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "tcp latency (rtt)",
+    "config": "200ms",
+    "measured": "201.0ms",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "udp latency (rtt)",
+    "config": "200ms",
+    "measured": "201.1ms",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "udp jitter",
+    "config": "100±40ms",
+    "measured": "avg 97.5 min 65.9 max 127.3",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "latency != bw cap",
+    "config": "200ms, no bw",
+    "measured": "332 Mbps (32MB)",
+    "pass": true,
+    "note": "old code: ~1 chunk per latency"
+  },
+  {
+    "case": "download-bandwidth",
+    "config": "2 Mbps",
+    "measured": "2.01 Mbps",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "download-bandwidth",
+    "config": "8 Mbps",
+    "measured": "8.05 Mbps",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "download-bandwidth",
+    "config": "20 Mbps",
+    "measured": "20.13 Mbps",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "upload-bandwidth",
+    "config": "4 Mbps",
+    "measured": "4.03 Mbps",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "udp loss (round trip)",
+    "config": "10%",
+    "measured": "10.40%",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "udp burst loss avg",
+    "config": "6%, runs of 4",
+    "measured": "5.16%",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "udp corruption",
+    "config": "5%",
+    "measured": "4.57%",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "udp duplication",
+    "config": "5%",
+    "measured": "4.87%",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "udp reordering",
+    "config": "10%",
+    "measured": "9.33%",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "udp packet-size",
+    "config": "500B",
+    "measured": "400B:50/50 600B:0/50",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "tcp loss integrity",
+    "config": "2%, 40ms",
+    "measured": "sha ok, 5.59 Mbps, retransmits=30",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "api patch",
+    "config": "latency kept",
+    "measured": "latency=120 jitter=30",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "api validation",
+    "config": "loss=150 rejected",
+    "measured": "400",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "api delete",
+    "config": "disabled",
+    "measured": "enabled=False",
+    "pass": true,
+    "note": ""
+  }
+]

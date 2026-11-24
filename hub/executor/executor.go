@@ -527,7 +527,7 @@ func updateIPTables(cfg *config.Config) {
 
 func applyNetSim(cfg *config.Config) {
 	raw := cfg.General.NetSim
-	netsim.UpdateConfig(&netsim.Config{
+	simCfg := &netsim.Config{
 		Enabled:           raw.Enabled,
 		Latency:           raw.Latency,
 		Jitter:            raw.Jitter,
@@ -542,7 +542,12 @@ func applyNetSim(cfg *config.Config) {
 		BurstDelay:        raw.BurstDelay,
 		PacketSize:        raw.PacketSize,
 		QueueType:         raw.QueueType,
-	})
+	}
+	if err := simCfg.Validate(); err != nil {
+		log.Errorln("[NetSim] invalid net-sim config, net-sim disabled: %s", err)
+		simCfg = netsim.DefaultConfig()
+	}
+	netsim.UpdateConfig(simCfg)
 }
 
 func Shutdown() {

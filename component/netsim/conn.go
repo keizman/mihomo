@@ -1,101 +1,161 @@
 package netsim
 
 import (
-	"context"
 	"net"
+	"sync"
 	"time"
+
+	"github.com/metacubex/sing/common"
+	N "github.com/metacubex/sing/common/network"
 )
 
-// SimConn wraps a net.Conn to apply network simulation on TCP streams.
+// maxQueuedBytes bounds the bytes "in flight" on the simulated wire per
+// connection direction (acts like a TCP window, gives back-pressure).
+const maxQueuedBytes = 4 << 20
+
+// SimConn wraps the *destination* side of one relay direction.
+//
+// Only Write is simulated, so every byte crosses the simulator exactly once
+// per direction:
+//   - inbound  (client side)  Write = download (remote -> client)
+//   - outbound (remote side)  Write = upload   (client -> remote)
+//
+// Read is passed through untouched.
+//
+// TCP is a reliable byte stream, so packet-level effects are translated into
+// what an application would observe on a real lossy link:
+//   - loss / corruption : each lost (or checksum-failed) segment stalls the
+//     stream by one RTO (retransmission), data is never dropped or altered
+//   - duplication / reordering : absorbed by the TCP stack, no visible effect
 type SimConn struct {
 	net.Conn
-	dir Direction
+	dir  Direction
+	line *delayLine
+
+	errMu sync.Mutex
+	err   error
+
+	closeOnce      sync.Once
+	closeWriteOnce sync.Once
 }
 
 func WrapConn(conn net.Conn, dir Direction) net.Conn {
-	return &SimConn{Conn: conn, dir: dir}
+	return &SimConn{
+		Conn: conn,
+		dir:  dir,
+		line: newDelayLine(maxQueuedBytes),
+	}
 }
 
-func (c *SimConn) Read(b []byte) (int, error) {
-	n, err := c.Conn.Read(b)
-	if err != nil || n == 0 {
-		return n, err
+func (c *SimConn) setErr(err error) {
+	c.errMu.Lock()
+	if c.err == nil {
+		c.err = err
 	}
+	c.errMu.Unlock()
+}
 
-	cfg := GetConfig()
-	if !cfg.HasAnyEffect() {
-		return n, nil
-	}
-	e := getEngine()
-	e.stats.TotalPackets.Add(1)
-
-	// loss: simulate by returning 0 bytes read (force re-read)
-	if e.shouldDrop(&cfg) {
-		e.stats.DroppedPackets.Add(1)
-		// for TCP we skip this chunk, caller will retry
-		return 0, nil
-	}
-
-	// latency + jitter + burst delay
-	if delay := e.calcDelay(&cfg); delay > 0 {
-		e.stats.DelayedPackets.Add(1)
-		time.Sleep(delay)
-	}
-
-	// corruption
-	if cfg.Corruption > 0 {
-		e.corruptData(b[:n], &cfg)
-	}
-
-	return n, nil
+func (c *SimConn) getErr() error {
+	c.errMu.Lock()
+	defer c.errMu.Unlock()
+	return c.err
 }
 
 func (c *SimConn) Write(b []byte) (int, error) {
-	cfg := GetConfig()
-	if !cfg.HasAnyEffect() {
+	if err := c.getErr(); err != nil {
+		return 0, err
+	}
+	p := load()
+	if !p.cfg.HasAnyEffect() && c.line.idle() {
+		// net-sim switched off while this connection was open
 		return c.Conn.Write(b)
 	}
-	e := getEngine()
-	e.stats.TotalPackets.Add(1)
+	n := len(b)
+	if n == 0 {
+		return 0, nil
+	}
+	countPacket(c.dir)
 
-	// loss
-	if e.shouldDrop(&cfg) {
-		e.stats.DroppedPackets.Add(1)
-		return len(b), nil // pretend we wrote it
+	// 1. serialization on the bottleneck link (blocks -> real back-pressure)
+	throttle(c.dir, n)
+
+	// 2. propagation delay (+ jitter + burst delay) and retransmission stalls
+	var delay, stall time.Duration
+	if p.cfg.HasAnyEffect() {
+		delay = oneWayDelay(p, c.dir)
+		if delay > 0 {
+			stats.DelayedPackets.Add(1)
+		}
+		stall = tcpLossStall(p, c.dir, n)
 	}
 
-	// latency + jitter + burst delay
-	if delay := e.calcDelay(&cfg); delay > 0 {
-		e.stats.DelayedPackets.Add(1)
-		time.Sleep(delay)
+	data := make([]byte, n)
+	copy(data, b)
+	ok := c.line.schedule(delay, stall, n, func() {
+		if c.getErr() != nil {
+			return
+		}
+		if _, err := c.Conn.Write(data); err != nil {
+			c.setErr(err)
+		}
+	})
+	if !ok {
+		return 0, net.ErrClosed
 	}
+	return n, nil
+}
 
-	// corruption: work on a copy
-	data := b
-	if cfg.Corruption > 0 {
-		dataCopy := make([]byte, len(b))
-		copy(dataCopy, b)
-		e.corruptData(dataCopy, &cfg)
-		data = dataCopy
+// tcpLossStall returns the retransmission stall for a chunk of n bytes.
+// Every MSS-sized segment is subject to loss and corruption; any loss costs
+// one RTO for the chunk (SACK recovers several holes in one round).
+func tcpLossStall(p *params, dir Direction, n int) time.Duration {
+	if p.loss <= 0 && p.corrupt <= 0 {
+		return 0
 	}
-
-	// Apply bandwidth shaping on write path using connection direction.
-	// - inbound(DirectionDownload) Write: remote -> local (download)
-	// - outbound(DirectionUpload) Write: local -> remote (upload)
-	if limiter := e.getLimiter(c.dir); limiter != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		_ = limiter.Wait(ctx, len(data))
-		cancel()
-		e.stats.ThrottledBytes.Add(int64(len(data)))
+	segments := (n + p.mss - 1) / p.mss
+	hit := false
+	for i := 0; i < segments; i++ {
+		if lost(p, dir) {
+			countDrop(dir)
+			hit = true
+		} else if chance(p.corrupt) {
+			stats.CorruptedPackets.Add(1)
+			hit = true
+		}
 	}
-
-	n, err := c.Conn.Write(data)
-
-	// duplication
-	if err == nil && e.shouldDuplicate(&cfg) {
-		e.stats.DuplicatedPackets.Add(1)
-		_, _ = c.Conn.Write(data)
+	if !hit {
+		return 0
 	}
+	stats.TCPRetransmits.Add(1)
+	return p.rto
+}
 
-	return n, err
+// CloseWrite half-closes after all queued data has been delivered.
+func (c *SimConn) CloseWrite() error {
+	c.closeWriteOnce.Do(func() {
+		c.line.closeAfter(func() {
+			// same rule as sing's CopyConn: half-close when supported
+			if cw, ok := common.Cast[N.WriteCloser](c.Conn); ok {
+				_ = cw.CloseWrite()
+			} else {
+				_ = c.Conn.Close()
+			}
+		})
+	})
+	return nil
+}
+
+// Close does not block: data already on the simulated wire is still
+// delivered at its due time, then the underlying connection is closed.
+// After a write error the connection is closed immediately.
+func (c *SimConn) Close() error {
+	c.closeOnce.Do(func() {
+		if c.getErr() != nil {
+			c.line.closeAfter(func() {})
+			_ = c.Conn.Close()
+			return
+		}
+		c.line.closeAfter(func() { _ = c.Conn.Close() })
+	})
+	return nil
 }

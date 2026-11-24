@@ -33,13 +33,10 @@ func updateNetSim(w http.ResponseWriter, r *http.Request) {
 		render.JSON(w, r, render.M{"error": err.Error()})
 		return
 	}
-	if cfg.QueueType != "" && !netsim.ValidQueueType(cfg.QueueType) {
+	if err := cfg.Validate(); err != nil {
 		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, render.M{"error": "invalid queue-type, must be: fifo, prio, or fair-queue"})
+		render.JSON(w, r, render.M{"error": err.Error()})
 		return
-	}
-	if cfg.QueueType == "" {
-		cfg.QueueType = netsim.QueueFIFO
 	}
 	netsim.UpdateConfig(&cfg)
 	render.JSON(w, r, render.M{"message": "net-sim updated", "config": cfg})
@@ -68,9 +65,9 @@ func patchNetSim(w http.ResponseWriter, r *http.Request) {
 		render.JSON(w, r, render.M{"error": err.Error()})
 		return
 	}
-	if cfg.QueueType != "" && !netsim.ValidQueueType(cfg.QueueType) {
+	if err := cfg.Validate(); err != nil {
 		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, render.M{"error": "invalid queue-type"})
+		render.JSON(w, r, render.M{"error": err.Error()})
 		return
 	}
 	netsim.UpdateConfig(&cfg)
