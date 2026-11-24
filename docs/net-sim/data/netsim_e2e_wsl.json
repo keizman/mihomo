@@ -2,35 +2,35 @@
   {
     "case": "baseline",
     "config": "off",
-    "measured": "tcp 0.1ms udp 0.1ms",
+    "measured": "tcp 0.2ms udp 0.3ms",
     "pass": true,
     "note": ""
   },
   {
     "case": "tcp latency (rtt)",
     "config": "200ms",
-    "measured": "201.0ms",
+    "measured": "200.8ms",
     "pass": true,
     "note": ""
   },
   {
     "case": "udp latency (rtt)",
     "config": "200ms",
-    "measured": "201.1ms",
+    "measured": "200.8ms",
     "pass": true,
     "note": ""
   },
   {
     "case": "udp jitter",
     "config": "100±40ms",
-    "measured": "avg 97.5 min 65.9 max 127.3",
+    "measured": "avg 101.4 min 63.8 max 125.8",
     "pass": true,
     "note": ""
   },
   {
     "case": "latency != bw cap",
     "config": "200ms, no bw",
-    "measured": "332 Mbps (32MB)",
+    "measured": "333 Mbps (32MB)",
     "pass": true,
     "note": "old code: ~1 chunk per latency"
   },
@@ -65,35 +65,35 @@
   {
     "case": "udp loss (round trip)",
     "config": "10%",
-    "measured": "10.40%",
+    "measured": "10.03%",
     "pass": true,
     "note": ""
   },
   {
     "case": "udp burst loss avg",
     "config": "6%, runs of 4",
-    "measured": "5.16%",
+    "measured": "6.20%",
     "pass": true,
     "note": ""
   },
   {
     "case": "udp corruption",
     "config": "5%",
-    "measured": "4.57%",
+    "measured": "4.53%",
     "pass": true,
     "note": ""
   },
   {
     "case": "udp duplication",
     "config": "5%",
-    "measured": "4.87%",
+    "measured": "5.67%",
     "pass": true,
     "note": ""
   },
   {
     "case": "udp reordering",
     "config": "10%",
-    "measured": "9.33%",
+    "measured": "8.93%",
     "pass": true,
     "note": ""
   },
@@ -107,7 +107,14 @@
   {
     "case": "tcp loss integrity",
     "config": "2%, 40ms",
-    "measured": "sha ok, 5.59 Mbps, retransmits=30",
+    "measured": "sha ok, 5.41 Mbps, retransmits=31",
+    "pass": true,
+    "note": ""
+  },
+  {
+    "case": "hot update (open conn)",
+    "config": "0 -> 200 -> 0ms",
+    "measured": "tcp 0/201/0 udp 0/201",
     "pass": true,
     "note": ""
   },

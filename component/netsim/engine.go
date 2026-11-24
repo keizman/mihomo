@@ -149,8 +149,16 @@ func init() {
 
 func load() *params { return current.Load() }
 
+// Enabled reports whether any simulation effect is currently active.
 func Enabled() bool {
 	return load().cfg.HasAnyEffect()
+}
+
+// Armed reports whether net-sim is switched on (enabled: true), even if
+// every value is 0. New connections are routed through the simulator while
+// armed, so later hot updates (PUT/PATCH) also apply to them.
+func Armed() bool {
+	return load().cfg.Enabled
 }
 
 func UpdateConfig(cfg *Config) {

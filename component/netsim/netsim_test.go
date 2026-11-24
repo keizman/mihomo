@@ -197,6 +197,24 @@ func TestTCPCloseDeliversQueuedData(t *testing.T) {
 	}
 }
 
+func TestTCPTotalOutageFreezesAndResumes(t *testing.T) {
+	setCfg(t, Config{Loss: 100})
+	c := relayPair(t, echo)
+	c.Write([]byte("ping"))
+	c.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	buf := make([]byte, 4)
+	if n, err := c.Read(buf); err == nil {
+		t.Fatalf("expected outage, got %q", buf[:n])
+	}
+	cfg := GetConfig()
+	cfg.Loss = 0
+	UpdateConfig(&cfg)
+	c.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if _, err := io.ReadFull(c, buf); err != nil || string(buf) != "ping" {
+		t.Fatalf("not resumed: %q %v", buf, err)
+	}
+}
+
 // udpRoundTrip sends n datagrams through an upload flow, echoes them through
 // a download flow and returns what came back.
 func udpRoundTrip(n int, gap time.Duration) [][]byte {

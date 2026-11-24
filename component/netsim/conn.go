@@ -76,6 +76,22 @@ func (c *SimConn) Write(b []byte) (int, error) {
 	}
 	countPacket(c.dir)
 
+	// 0. loss: 100 is a total outage: nothing gets through, the stream freezes
+	// and resumes (data intact, like TCP retransmission) once loss is lowered.
+	if p.loss >= 1 {
+		countDrop(c.dir)
+		for p.loss >= 1 && !c.line.isClosed() {
+			time.Sleep(50 * time.Millisecond)
+			p = load()
+		}
+		if c.line.isClosed() {
+			return 0, net.ErrClosed
+		}
+		if !p.cfg.HasAnyEffect() && c.line.idle() {
+			return c.Conn.Write(b)
+		}
+	}
+
 	// 1. serialization on the bottleneck link (blocks -> real back-pressure)
 	throttle(c.dir, n)
 

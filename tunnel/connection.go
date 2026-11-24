@@ -205,7 +205,7 @@ func handleUDPToLocal(writeBack C.WriteBack, pc C.PacketConn, sender C.PacketSen
 
 		fromAddrPort = netip.AddrPortFrom(fromAddr, fromAddrPort.Port())
 
-		if simFlow == nil && netsim.Enabled() {
+		if simFlow == nil && netsim.Armed() {
 			simFlow = netsim.NewUDPFlow(netsim.DirectionDownload)
 		}
 		if simFlow != nil {
@@ -247,7 +247,7 @@ func closeAllLocalCoon(lAddr string) {
 }
 
 func handleSocket(inbound, outbound net.Conn) {
-	if netsim.Enabled() {
+	if netsim.Armed() {
 		inbound = netsim.WrapConn(inbound, netsim.DirectionDownload)
 		outbound = netsim.WrapConn(outbound, netsim.DirectionUpload)
 	}

@@ -137,7 +137,7 @@ var upstreamFlows sync.Map // key -> *UDPFlow
 // PacketConn). It returns nil when net-sim is off and no flow exists yet.
 func UpstreamFlow(key any) *UDPFlow {
 	if key == nil || !reflect.TypeOf(key).Comparable() {
-		if Enabled() {
+		if Armed() {
 			return NewUDPFlow(DirectionUpload)
 		}
 		return nil
@@ -145,7 +145,7 @@ func UpstreamFlow(key any) *UDPFlow {
 	if v, ok := upstreamFlows.Load(key); ok {
 		return v.(*UDPFlow)
 	}
-	if !Enabled() {
+	if !Armed() {
 		return nil
 	}
 	v, _ := upstreamFlows.LoadOrStore(key, NewUDPFlow(DirectionUpload))

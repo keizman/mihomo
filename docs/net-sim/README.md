@@ -50,8 +50,11 @@
   因此一次全新的 HTTP 请求约为 `1 × latency`（真实网络约 2 × RTT，含握手）。
 - net-sim 只作用于经过 mihomo 隧道转发的流量（TUN / mixed / socks / http 入站）。
   `dns-hijack` 由内核直接应答的 DNS 不受影响，如需模拟 DNS 延迟用已有的 `/dns/delay`。
-- 通过 API 开启 net-sim 后，**新建**的 TCP 连接才会被模拟；已存在的长连接不受影响。
-  关闭后已被包装的连接立即恢复直通。
+- `enabled: true` 期间建立的连接都会经过模拟器（即使所有值为 0，此时是零开销直通），
+  之后通过 API 修改参数对这些连接**立即生效**；`enabled: false` 期间建立的连接不会被模拟。
+  所以推荐在 profile 里常驻 `net-sim: {enabled: true}`，测试时只用 PUT/PATCH 切换参数。
+- `loss: 100` = 断网：UDP 全丢、TCP 冻结；调低 loss 后 TCP 从断点继续（数据完整）。
+- 给 AI / 自动化测试用的完整配置与热更新流程见 [`NETSIM_AI_GUIDE.md`](NETSIM_AI_GUIDE.md)。
 
 ## 配置示例
 
@@ -152,19 +155,20 @@ python3 netsim_e2e.py --api http://127.0.0.1:19090 --socks 192.168.8.100:7890 \
 
 | 项目 | 配置 | 实测 |
 |---|---|---|
-| TCP latency (RTT) | 200ms | 201.0ms |
-| UDP latency (RTT) | 200ms | 201.1ms |
-| UDP jitter | 100±40ms | avg 97.5, min 65.9, max 127.3 |
-| latency 不再限制吞吐 | 200ms | 32MB 下载 332 Mbps |
+| TCP latency (RTT) | 200ms | 200.8ms |
+| UDP latency (RTT) | 200ms | 200.8ms |
+| UDP jitter | 100±40ms | avg 101.4, min 63.8, max 125.8 |
+| latency 不再限制吞吐 | 200ms | 32MB 下载 333 Mbps |
 | download-bandwidth | 2 / 8 / 20 Mbps | 2.01 / 8.05 / 20.13 Mbps |
 | upload-bandwidth | 4 Mbps | 4.03 Mbps |
-| UDP loss (往返) | 10% | 10.40% |
-| UDP burst loss 平均 | 6%, 每串 4 | 5.16% |
-| UDP corruption | 5% | 4.57% |
-| UDP duplication | 5% | 4.87% |
-| UDP reordering | 10% | 9.33% |
+| UDP loss (往返) | 10% | 10.03% |
+| UDP burst loss 平均 | 6%, 每串 4 | 6.20% |
+| UDP corruption | 5% | 4.53% |
+| UDP duplication | 5% | 5.67% |
+| UDP reordering | 10% | 8.93% |
 | packet-size | 500B | 400B 包 50/50 通过, 600B 包 0/50 |
-| TCP loss 数据完整性 | 2% + 40ms | sha256 一致, tcp-retransmits=30 |
+| TCP loss 数据完整性 | 2% + 40ms | sha256 一致, tcp-retransmits=31 |
+| 热更新（同一条已打开的连接） | 0 → 200 → 0ms | TCP 0/201/0ms, UDP 0/201ms |
 | API PATCH / 校验 / DELETE | - | 全部正确 |
 
 概率类指标是统计值：3000 个样本时有约 ±0.5~1% 的随机波动（突发丢包每次连丢 N 个，波动更大），样本越多越接近配置值；单元测试用 5~8 万个样本时误差在 ±0.3% 内。

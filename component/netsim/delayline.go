@@ -76,6 +76,12 @@ func (d *delayLine) closeAfter(fn func()) {
 	d.cond.Broadcast()
 }
 
+func (d *delayLine) isClosed() bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.closed
+}
+
 // idle reports whether nothing is queued or being delivered, i.e. the
 // caller may write directly without racing the worker.
 func (d *delayLine) idle() bool {

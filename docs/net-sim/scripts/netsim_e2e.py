@@ -370,6 +370,34 @@ def run(a):
            ("ok" if ok else "BAD", got * 8 / el / 1e6, st.get("tcp-retransmits", 0)),
            ok and st.get("tcp-retransmits", 0) > 0)
 
+    # hot update must reach connections that are already open
+    api(a, "PUT", body={"enabled": True})
+    s = socks_tcp(a.socks, a.target, a.echo_port)
+    u = SocksUDP(a.socks, a.target, a.udp_port)
+
+    def tcp_once():
+        t = time.perf_counter()
+        s.sendall(b"ping")
+        recv_exact(s, 4)
+        return (time.perf_counter() - t) * 1000
+
+    def udp_once():
+        t = time.perf_counter()
+        u.send(b"ping")
+        u.recv(3)
+        return (time.perf_counter() - t) * 1000
+
+    t0, u0 = statistics.median([tcp_once() for _ in range(5)]), statistics.median([udp_once() for _ in range(5)])
+    api(a, "PATCH", body={"latency": 200})
+    t1, u1 = statistics.median([tcp_once() for _ in range(5)]), statistics.median([udp_once() for _ in range(5)])
+    api(a, "PATCH", body={"latency": 0})
+    time.sleep(0.3)
+    t2 = statistics.median([tcp_once() for _ in range(5)])
+    s.close()
+    u.close()
+    report("hot update (open conn)", "0 -> 200 -> 0ms", "tcp %.0f/%.0f/%.0f udp %.0f/%.0f" % (t0, t1, t2, u0, u1),
+           t0 < 15 and abs(t1 - 200) <= 15 and t2 < 15 and u0 < 15 and abs(u1 - 200) <= 15)
+
     api(a, "PUT", body={"enabled": True, "latency": 120})
     api(a, "PATCH", body={"jitter": 30})
     cfg = api(a, "GET")
